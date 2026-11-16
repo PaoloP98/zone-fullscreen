@@ -34,7 +34,7 @@ An ultrawide monitor (3440×1440, the only screen). Windows placed side by side 
 4. **Resizing.** The window is moved at once to the zone's rectangle.
 5. **Leaving.** When the program leaves fullscreen it restores its previous position by itself; the app just forgets the state. When the app is closed, windows still in a zone are left where they are (their own Esc/F11 brings them back to normal anyway).
 6. **Anti-fight.** If a program goes back to the whole screen right after each of our moves more than 5 times in 2 seconds, or more than 10 times in 30 seconds at any pace, the app leaves it alone until it next leaves fullscreen.
-7. **Hotkey** `Ctrl+Win+F11`: forces the active window, without borders, into its zone, and again to restore it.
+7. **Hotkey** `Ctrl+Win+F11`: forces the active window, without borders, into its zone, and again to restore it. The windows left without borders are also written to `frameless-windows.txt` next to the launcher: if the app dies before restoring them, the next start does it.
 8. **Tray menu:** enable/disable, start with Windows, exclude the active program, exit. It also shows which FancyZones layout is in use.
 9. **Exclusions:** a list of process names in `config.json`.
 
@@ -59,6 +59,8 @@ Internal code structure, exact format of `config.json`, icon.
 
 ### Browsers (extension in `extension/`)
 Edge and Chrome in fullscreen grow back by themselves on every focus change or popup, so the app does not handle them (a menu option turns that back on). An extension handles them: the player's fullscreen, `F11`, the toolbar button and `Alt+Shift+F` move the tab into a window with only a title bar, in the same rectangle as the window it came from. A maximized window keeps the real fullscreen. Like the browser itself, the extension only grants fullscreen right after a click or key press.
+- The fullscreen button of a plain `<video controls>` player bypasses the page's fullscreen API, so the window really goes fullscreen for a moment (like `F11`); the extension undoes that and keeps the video filling the bare window instead.
+- A tab moved out for the page goes back when the page leaves fullscreen or navigates away. A tab moved out by the user stays out across navigation until the user puts it back.
 
 ### Share a zone (for video calls)
 Request: share a single FancyZones zone instead of the whole wide screen.

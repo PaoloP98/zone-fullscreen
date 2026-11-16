@@ -31,7 +31,7 @@ The app is not an executable: it is C# source compiled in memory at every start.
 ### Using it
 
 - Put a window in a zone and send it fullscreen: it stays in the zone.
-- `Ctrl+Win+F11` fits the active window, without borders, to its zone; press it again to undo.
+- `Ctrl+Win+F11` fits the active window, without borders, to its zone; press it again to undo. If the app is killed in the meantime, the window gets its borders back the next time the app starts.
 - Right-click the icon to: enable or disable, cover the taskbar or not, exclude a program, share a single zone in video calls, start with Windows, exit.
 
 If a program keeps taking the whole screen back, the app stops insisting and leaves it alone until it next leaves fullscreen.
@@ -55,6 +55,8 @@ It is not in the stores yet, so it is loaded from its folder:
 3. **Load unpacked** and pick the `extension` folder.
 
 From then on a video's fullscreen, `F11`, the toolbar button and `Alt+Shift+F` move the tab into a window with only a title bar, the same size as the window it came from. A maximized window keeps the real fullscreen.
+
+A tab moved out for a video goes back when the video leaves fullscreen or the page changes. A tab you moved out yourself (`F11`, button, shortcut) stays out while you browse, until you press it again.
 
 The extension asks for the `storage` permission only and talks neither to the app nor to the network.
 
