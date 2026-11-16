@@ -1,7 +1,9 @@
-# Checks that the browser extension only goes "fullscreen" right after a user action, like the
-# browser itself does. Drives a local test page in Edge (throwaway profile) through the
-# debugging protocol, which can run script with or without a simulated user gesture.
-# Run:  powershell -NoProfile -File tests\e2e-gesture.ps1      (an Edge window opens for ~25 s)
+# Checks the browser extension in a real Edge (throwaway profile), driven through the debugging
+# protocol, which can run script with or without a simulated user gesture:
+#   - "fullscreen" is only granted right after a user action, like the browser itself does
+#   - the fullscreen button of <video controls> stays inside the window too
+#   - a tab popped out by the page goes back on navigation, one popped out with F11 does not
+# Run:  powershell -NoProfile -File tests\e2e-gesture.ps1      (an Edge window opens for ~50 s)
 param([int]$Port = 8766, [int]$DebugPort = 9334, [int]$X = 1736, [int]$Y = 16, [int]$W = 1688, [int]$H = 1360)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -53,12 +55,28 @@ function State {
     "$(Js "document.fullscreenElement ? document.fullscreenElement.id : 'none'") $where"
 }
 $request = "document.getElementById('box').requestFullscreen().then(() => 'granted')"
+function Window-State { (Cdp-Send 'Browser.getWindowBounds' @{ windowId = (Window-Id) }).result.bounds.windowState }
+# What the fullscreen button of a <video controls> player does: it asks the browser directly.
+# A fresh isolated world still has the browser's own requestFullscreen, not the replaced one.
+function Press-VideoButton {
+    $frame = (Cdp-Send 'Page.getFrameTree').result.frameTree.frame.id
+    $world = (Cdp-Send 'Page.createIsolatedWorld' @{ frameId = $frame; worldName = 'zf-test' }).result.executionContextId
+    [void](Cdp-Send 'Runtime.evaluate' @{ expression = "document.getElementById('vid').requestFullscreen()"; contextId = $world; userGesture = $true; awaitPromise = $true })
+    Start-Sleep -Seconds 3
+    State
+}
+# F11 cannot be typed through the protocol; making the window fullscreen is what it does.
+function Press-F11 {
+    [void](Cdp-Send 'Browser.setWindowBounds' @{ windowId = (Window-Id); bounds = @{ windowState = 'fullscreen' } })
+    Start-Sleep -Seconds 3
+}
 
 $page = @'
 <!doctype html><title>ZoneFullscreen gesture test</title>
 <body style="margin:0;background:#223;color:#fff;font:20px sans-serif">
 <p>ZoneFullscreen gesture test</p>
 <div id="box" style="width:300px;height:200px;background:#c33">box</div>
+<video id="vid" controls style="width:300px;height:200px;background:#000"></video>
 <script>var errors = 0; document.addEventListener('fullscreenerror', function () { errors++; });</script>
 '@
 $file = Join-Path $env:TEMP "zf-page-$Port.html"
@@ -97,6 +115,25 @@ try {
     Check 'leaving is allowed without a user action' (Js "document.exitFullscreen().then(() => 'left')") 'left'
     Start-Sleep -Seconds 3
     Check 'back in the normal window' (State) 'none normal-window'
+
+    # ---- the fullscreen button of <video controls>: it bypasses the page's API ----
+    Check 'video button: the element fills a bare window' (Press-VideoButton) 'vid bare-window'
+    Check 'video button: the window is not really fullscreen' (Window-State) 'normal'
+    Check 'video button again: back in the normal window' (Press-VideoButton) 'none normal-window'
+
+    # ---- a tab popped out for the page goes back when the page navigates away ----
+    [void](Js $request $true); Start-Sleep -Seconds 3
+    Check 'page fullscreen before navigating' (State) 'box bare-window'
+    [void](Cdp-Send 'Page.navigate' @{ url = "http://localhost:$Port/?second" }); Start-Sleep -Seconds 3
+    Check 'navigating ends the page fullscreen' (State) 'none normal-window'
+
+    # ---- a tab popped out by the user (F11) stays out across navigation ----
+    Press-F11
+    Check 'F11 moves the tab to a bare window' (State) 'none bare-window'
+    [void](Cdp-Send 'Page.navigate' @{ url = "http://localhost:$Port/?third" }); Start-Sleep -Seconds 3
+    Check 'F11 survives navigation' (State) 'none bare-window'
+    Press-F11
+    Check 'F11 again puts the tab back' (State) 'none normal-window'
 } finally {
     if ($script:ws) { $script:ws.Dispose() }
     Edge-Procs | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }

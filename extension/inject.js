@@ -63,13 +63,13 @@
     }
   }
 
-  function enter(el) {
+  function enter(el, tellOutside = true) {
     if (current === el) return;
     const wasActive = current !== null;
     if (current) unmark(current);
     current = el;
     mark(el);
-    if (!wasActive) announce(true);
+    if (!wasActive && tellOutside) announce(true);
     fire(el);
     window.dispatchEvent(new Event('resize'));
   }
@@ -108,9 +108,39 @@
     return frame.allowFullscreen || /(^|[;\s])fullscreen/.test(frame.getAttribute('allow') || '');
   }
 
+  // ---- fullscreen that never went through the API replaced below ----
+  // The fullscreen button of a <video controls> player talks straight to the browser, so the
+  // window really goes fullscreen. The extension then takes the window back (background.js) and
+  // asks the page to show that element full-window instead: the top page hears 'zf-adopt' and
+  // passes it down to the frame the element lives in. The same button turns it off again.
+  let lastNative = null;   // survives the moment the browser leaves fullscreen
+  function nativeElement() {
+    return nativeElementGetter ? nativeElementGetter.call(document) : null;
+  }
+  document.addEventListener('fullscreenchange', () => {
+    const el = nativeElement();
+    if (el) lastNative = el;
+  }, true);
+
+  function adopt() {
+    const el = nativeElement() || lastNative;
+    lastNative = null;
+    if (!el || !el.isConnected) return;
+    if (current === el) { leave(false); return; }
+    enter(el, false);
+    if (el instanceof HTMLIFrameElement && el.contentWindow) {
+      el.contentWindow.postMessage({ zoneFullscreen: 'adopt-from-parent' }, '*');
+    }
+  }
+  if (isTop) document.addEventListener('zf-adopt', adopt);
+
   window.addEventListener('message', (e) => {
     const kind = e.data && e.data.zoneFullscreen;
     if (!kind) return;
+    if (kind === 'adopt-from-parent') {
+      if (!isTop && e.source === window.parent) adopt();
+      return;
+    }
     if (kind === 'exit-from-parent') {
       if (e.source === window.parent) leave(false);
       return;

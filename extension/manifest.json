@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ZoneFullscreen for browsers",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Video fullscreen stays inside the window: the tab moves to a window of its own, the same size as the one it left, instead of taking the whole screen.",
   "minimum_chrome_version": "111",
   "permissions": ["storage"],

@@ -15,11 +15,20 @@ document.addEventListener('zf-popout', (e) => {
   if (e.detail === 'enter' || e.detail === 'exit') send(e.detail);
 });
 
-// The background put the tab back (F11, button, shortcut): the page must drop its full-window element.
-chrome.runtime.onMessage.addListener((message) => {
-  if (message && message.action === 'leave') document.dispatchEvent(new CustomEvent('zf-leave'));
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message) return;
+  // The background put the tab back (F11, button, shortcut): the page must drop its full-window element.
+  if (message.action === 'leave') document.dispatchEvent(new CustomEvent('zf-leave'));
+  // The window really went fullscreen and the background is about to undo that. If an element
+  // caused it (a <video controls> button), inject.js keeps it full-window, or drops it if it
+  // already was. This world sees the browser's own fullscreenElement, not the replaced one.
+  if (message.action === 'adopt') {
+    if (!document.fullscreenElement) { sendResponse('none'); return; }
+    document.dispatchEvent(new CustomEvent('zf-adopt'));
+    sendResponse(document.documentElement.classList.contains('zf-fullwindow-root') ? 'entered' : 'left');
+  }
 });
 
-// A freshly loaded page is never in window-fullscreen: if this tab was left popped out
+// A freshly loaded page shows no element full-window: if this tab was popped out for one
 // (reload, navigation), put it back where it came from.
 send('page-loaded');
