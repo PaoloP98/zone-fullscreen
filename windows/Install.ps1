@@ -23,14 +23,17 @@ if ($Remove) {
 Get-ChildItem $root -Recurse -File | Unblock-File
 
 $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+# "conhost --headless" gives PowerShell a console with no window at all. Started on its own,
+# PowerShell shows a console first and hides it afterwards; where Windows Terminal is the default
+# terminal that window stays open, and closing it closes the app.
+$conhost = Join-Path $env:SystemRoot 'System32\conhost.exe'
 $link = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcut)
-$link.TargetPath = $powershell
-$link.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcher`""
+$link.TargetPath = $conhost
+$link.Arguments = "--headless `"$powershell`" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcher`""
 $link.WorkingDirectory = $PSScriptRoot
-$link.WindowStyle = 7   # minimized: no console flashing on screen
 $link.Description = 'Fullscreen that stays inside the FancyZones zone'
 $link.Save()
 
-Start-Process $powershell -ArgumentList $link.Arguments
+Start-Process $conhost -ArgumentList $link.Arguments
 Write-Host 'ZoneFullscreen is running: look for its icon (two panes) in the notification area.'
 Write-Host 'It is in the Start menu too. To start it with Windows: right-click the icon > Start with Windows.'

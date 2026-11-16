@@ -264,9 +264,14 @@ namespace ZoneFullscreen
 
         private string AutostartCommand()
         {
+            string conhost = Path.Combine(Environment.SystemDirectory, "conhost.exe");
             string powershell = Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe");
+            // "conhost --headless" gives PowerShell a console with no window at all. Started on its
+            // own, PowerShell shows a console first and hides it afterwards; where Windows Terminal
+            // is the default terminal that window stays open, and closing it closes the app.
             // Bypass applies to this one process: without it the default policy refuses to run the script.
-            return "\"" + powershell + "\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"" + _launcher + "\"";
+            return "\"" + conhost + "\" --headless \"" + powershell +
+                   "\" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"" + _launcher + "\"";
         }
 
         private string AutostartValue()
@@ -292,7 +297,11 @@ namespace ZoneFullscreen
                 if (value != null && !string.Equals(value, AutostartCommand(), StringComparison.OrdinalIgnoreCase))
                     SetAutostart(true);
             }
-            catch (Exception) { } // registry not writable: the old entry keeps working where it did
+            catch (Exception e)
+            {
+                // Registry not writable: the old entry keeps working where it did.
+                _watcher.Log("start-with-Windows entry not updated: " + e.Message);
+            }
         }
 
         private void SetAutostart(bool on)
