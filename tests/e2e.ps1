@@ -110,9 +110,15 @@ try {
 
 # ---- the hotkey path, driven directly (no hooks, no tray): frame off into the zone, then back ----
 $watcher = New-Object ZoneFullscreen.WindowWatcher (New-Object ZoneFullscreen.ZoneProvider ([ZoneFullscreen.ZoneProvider]::DefaultDirectory)),
-    ([ZoneFullscreen.AppConfig]::Load((Join-Path $env:TEMP 'zf-no-such-config.json'))), ''
+    ([ZoneFullscreen.AppConfig]::Load((Join-Path $env:TEMP 'zf-no-such-config.json'))), '', ''
+$statePath = Join-Path $env:TEMP 'zonefullscreen-e2e-frameless.txt'
+Remove-Item $statePath -ErrorAction SilentlyContinue
+function New-CrashWatcher {
+    New-Object ZoneFullscreen.WindowWatcher (New-Object ZoneFullscreen.ZoneProvider ([ZoneFullscreen.ZoneProvider]::DefaultDirectory)),
+        ([ZoneFullscreen.AppConfig]::Load((Join-Path $env:TEMP 'zf-no-such-config.json'))), '', $statePath
+}
 $start = Snapped $zones[0]
-$proc = Start-Fake 'ZfForced' $start '' '-CloseMs 9000'
+$proc = Start-Fake 'ZfForced' $start '' '-CloseMs 11000'
 try {
     $h = [IntPtr]::Zero
     $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -133,9 +139,20 @@ try {
         $watcher.ToggleForced($h); Start-Sleep -Milliseconds 300
         $watcher.Dispose(); Start-Sleep -Milliseconds 500
         Check 'ZfForced restored on shutdown' "$(Rect-Of $h) $(Has-Frame $h) $(Is-Topmost $h)" "$start True False"
+
+        # A run that dies with a window still forced: the next run must give the frame back.
+        $crashed = New-CrashWatcher
+        $crashed.ToggleForced($h); Start-Sleep -Milliseconds 300
+        Check 'ZfForced frameless when the app dies' "$(Has-Frame $h) $(Test-Path $statePath)" 'False True'
+        $crashed = $null   # never disposed, like a killed process
+        $next = New-CrashWatcher
+        Check 'ZfForced recovered by the next run' $next.RestoreAbandoned() 1
+        Start-Sleep -Milliseconds 300
+        Check 'ZfForced as it was before the crash' "$(Rect-Of $h) $(Has-Frame $h) $(Is-Topmost $h)" "$start True False"
+        Check 'ZfForced record cleared' (Test-Path $statePath) $false
     }
 } finally {
-    if (-not $proc.WaitForExit(9000)) { $proc.Kill() }
+    if (-not $proc.WaitForExit(11000)) { $proc.Kill() }
 }
 
 Write-Host ("{0} failure(s)" -f $script:failed)

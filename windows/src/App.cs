@@ -118,7 +118,7 @@ namespace ZoneFullscreen
             string dir = Path.GetDirectoryName(launcher) ?? ".";
             _config = AppConfig.Load(Path.Combine(dir, "config.json"));
             _zones = new ZoneProvider(ZoneProvider.DefaultDirectory);
-            _watcher = new WindowWatcher(_zones, _config, logPath);
+            _watcher = new WindowWatcher(_zones, _config, logPath, Path.Combine(dir, "frameless-windows.txt"));
             _hotkey = new HotkeyWindow(() => _watcher.ToggleForced(Native.GetForegroundWindow()));
 
             var menu = new ContextMenuStrip();

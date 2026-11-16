@@ -1,5 +1,6 @@
 # User settings and logs, created by the app next to the launcher
 windows/config.json
+windows/frameless-windows.txt
 *.log
 
 # Internal working notes and plans
