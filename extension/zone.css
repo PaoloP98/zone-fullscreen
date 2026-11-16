@@ -1,0 +1,42 @@
+/* The element the page asked to make fullscreen: fill the browser window instead. */
+.zf-fullwindow {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  z-index: 2147483647 !important;
+  transform: none !important;
+  background-color: #000;
+}
+
+video.zf-fullwindow {
+  object-fit: contain !important;
+}
+
+/* Its ancestors must not trap it: these properties would make "fixed" relative to them,
+   clip it, or keep it below the rest of the page. */
+.zf-fullwindow-ancestor {
+  transform: none !important;
+  perspective: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  contain: none !important;
+  container-type: normal !important;
+  will-change: auto !important;
+  clip-path: none !important;
+  mask: none !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+  z-index: 2147483647 !important;
+}
+
+html.zf-fullwindow-root,
+html.zf-fullwindow-root > body {
+  overflow: hidden !important;
+}

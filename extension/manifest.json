@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "ZoneFullscreen for browsers",
+  "version": "1.1.0",
+  "description": "Video fullscreen stays inside the window: the tab moves to a window of its own, the same size as the one it left, instead of taking the whole screen.",
+  "minimum_chrome_version": "111",
+  "permissions": ["storage"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Fullscreen in the zone (on/off)" },
+  "commands": {
+    "toggle": {
+      "suggested_key": { "default": "Alt+Shift+F" },
+      "description": "Fullscreen in the zone (on/off)"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["inject.js"],
+      "css": ["zone.css"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
